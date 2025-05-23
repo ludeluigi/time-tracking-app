@@ -1,22 +1,27 @@
-FROM node:18
+# Use imagem oficial Node.js LTS
+FROM node:18-slim
 
+# Defina o diretório de trabalho
 WORKDIR /app
 
 # Copie apenas os arquivos necessários para instalar dependências
-COPY package.json package-lock.json ./
+COPY package*.json ./
 
 # Instale as dependências
-RUN npm install
+RUN npm install --production
 
-# Copie o código da aplicação
-COPY index.js ./
+# Copie o restante do código da aplicação
+COPY . .
 
-# Crie um usuário não root para rodar a aplicação
-RUN useradd -m myuser
+# Crie um usuário não root e atribua permissões
+RUN useradd -m myuser && chown -R myuser /app
+
+# Troque para o usuário não root
 USER myuser
 
 # Exponha a porta
 EXPOSE 3000
 
-# Inicie a aplicação
+# Comando para rodar a aplicação
 CMD ["node", "index.js"]
+
