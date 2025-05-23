@@ -1,0 +1,46 @@
+name: Deploy Time Tracking App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run SonarCloud analysis
+        run: |
+          npm install sonarqube-scanner
+          ./node_modules/.bin/sonar-scanner
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Deploy to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 400 private_key.pem
+          ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST << 'EOF'
+            rm -rf time-tracking-app
+            git clone https://github.com/ludeluigi/time-tracking-app.git
+            cd time-tracking-app
+            npm install
+            pm2 stop time-tracking-app || true
+            pm2 start index.js --name "time-tracking-app"
+          EOF
+          rm private_key.pem
