@@ -26,6 +26,8 @@ jobs:
           ./node_modules/.bin/sonar-scanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_URL: https://sonarcloud.io
+
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
