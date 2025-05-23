@@ -27,6 +27,17 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ludeluigi/time-tracking-app:latest .
+          docker push ludeluigi/time-tracking-app:latest
+
       - name: Deploy to EC2
         env:
           PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
@@ -36,11 +47,9 @@ jobs:
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 400 private_key.pem
           ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST << 'EOF'
-            rm -rf time-tracking-app
-            git clone https://github.com/ludeluigi/time-tracking-app.git
-            cd time-tracking-app
-            npm install
-            pm2 stop time-tracking-app || true
-            pm2 start index.js --name "time-tracking-app"
+            docker stop time-tracking-app || true
+            docker rm time-tracking-app || true
+            docker pull ludeluigi/time-tracking-app:latest
+            docker run -d --name time-tracking-app -p 3000:3000 ludeluigi/time-tracking-app:latest
           EOF
           rm private_key.pem
